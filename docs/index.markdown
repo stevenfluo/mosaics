@@ -121,7 +121,7 @@ Berkeley Way West
 <p align="center">
     <img src="./img/bww_left.jpg" alt="ad" width="50%"/>
     <p style="text-align: center;"><i>Resulting mosaic.</i></p>
-</p>
+</p> 
 
 
 Room - Digicam
