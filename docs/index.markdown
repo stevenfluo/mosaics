@@ -98,6 +98,7 @@ For source images, I drew on photos I took during my trip to New York City this 
     <p style="text-align: center;"><i>Original, with points labeled, and rectified images.</i></p>
 </p>
 
+This museum is one of my favorites of all time, and is defintely worth the stop in Brooklyn for.
 
 The second image comes from the ceiling of the [Rose Main Reading Room](https://www.newyorker.com/culture/cultural-comment/nypl-rose-reading-room-and-the-real-meaning-of-luxury-in-new-york-city) in the Stephen A. Schwarzman Building —— the New York Public Library's flagship location.
 
@@ -108,9 +109,13 @@ The second image comes from the ceiling of the [Rose Main Reading Room](https://
     <p style="text-align: center;"><i>Original, with points labeled, and rectified images.</i></p>
 </p>
 
+I spent an afternoon working here before going on a tour of the United Nations!
+
 # Part A.3: Blending and Mosaicing
 
-Berkeley Way West
+I implemented a blending function to combine warped images with the base image their homography matrix was calculated relative to. First, I calculated the size of the output image. Then, I placed each image on its correct position on a blank output image using information about how much the image shifted during the warping process — if I were to stack these two images, the overlapping features should line up (I confirmed this during implementation). Finally, I blend these two images together using weights calculated from distance transforms for the images to combine the low frequencies. I used a Laplacian stack-based or a distance transform tiebreaker-based blending method to combine the high frequencies (further elaboration below).
+
+My first mosaic is of the third floor in Berkeley Way West. For this image, I warped the image of the left side of the field of view and blended it with the center view. Until I get a research position in BAIR, I'll be underneath the 8th floor :\)
 <p align="center">
     <img src="./img/bwwleft.jpg" alt="ad" width="30%"/>
     <img src="./img/bwwlm_warped_im.jpg" alt="ad" width="30%"/>
@@ -124,7 +129,8 @@ Berkeley Way West
 </p> 
 
 
-Room - Digicam
+I dug up an old Canon [Powershot](https://www.dpreview.com/articles/6913931643/the-vertical-elph-remembering-canons-powershot-tx1-hybrid-camera) [TX1](https://global.canon/en/c-museum/product/dcc541.html) last week, and have been putting it to use! I took photos of a particularly busy corner of my room using my digicam, and blended the warped lower perspective onto the higher perspective.
+
 <p align="center">
     <img src="./img/room1.jpg" alt="ad" width="30%"/>
     <img src="./img/room1_warped_im_new.jpg" alt="ad" width="30%"/>
@@ -138,7 +144,7 @@ Room - Digicam
 </p>
 
 
-Room - Phone
+Here's the same scene, but shot on my iPhone.
 <p align="center">
     <img src="./img/r1.jpg" alt="ad" width="30%"/>
     <img src="./img/r1_warped_im_new.jpg" alt="ad" width="30%"/>
@@ -151,7 +157,11 @@ Room - Phone
     <p style="text-align: center;"><i>Resulting mosaic.</i></p>
 </p>
 
-Gamcheon - left
+Personally, I prefer the "vibes" of the digicam photos —— what do you think?
+
+My last mosaics come from Busan, South Korea. Gamcheon Culture Village is a beautiful site with a great view of the ocean, though it was swelteringly hot when I was there earlier this year. 
+
+Here's the left side of the Gamcheon lookout warped and blended with the middle view:
 <p align="center">
     <img src="./img/left.jpg" alt="ad" width="30%"/>
     <img src="./img/lm_warped_im_new.jpg" alt="ad" width="30%"/>
@@ -164,7 +174,7 @@ Gamcheon - left
     <p style="text-align: center;"><i>Resulting mosaic.</i></p>
 </p>
 
-Gamcheon - right
+Here's the right side of the Gamcheon lookout warped and blended with the middle view:
 <p align="center">
     <img src="./img/right.jpg" alt="ad" width="30%"/>
     <img src="./img/rm_warped_im_new.jpg" alt="ad" width="30%"/>
@@ -177,17 +187,24 @@ Gamcheon - right
     <p style="text-align: center;"><i>Resulting mosaic.</i></p>
 </p>
 
+With several warped images relative to a fixed center image, I also implemented a function to automatically put together multi-image mosaics by tracking cumulative offsets and using the shifts from each warped image. In my blending function, I use distance transforms to create weights. I use a Gaussian filter to isolate the low frequencies of the images, which I combine with a weighted average. For the higher frequencies (the methodology to isolate these is the same as creating the Laplacian stack in [project 2](https://stevenfluo.github.io/filters-frequencies)). To create the final output image, I combined the low and high frequencies — just like collapsing the Laplacian stack.
 
-Gamcheon - total
+I tried two approaches to blending the high frequencies: first, a weighted average just like for the low-frequencies:
 
-v1 - laplace stacks
 <p align="center">
     <img src="./img/gamcheon_blended_laplace.jpg" alt="ad" width="90%"/>
     <p style="text-align: center;"><i>Resulting mosaic.</i></p>
 </p>
 
-v2 - distance
+Notice that because of the fine details in the image and slight misalignment between the two, you can spot blurry lines such as on the mural in the bottom middle of the photo.
+
+My second approach used the distance transforms as a tiebreaker to select whether to use the warped image or the base image high frequencies at a particular point: 
+
 <p align="center">
     <img src="./img/gamcheon_total.jpg" alt="ad" width="90%"/>
     <p style="text-align: center;"><i>Resulting mosaic.</i></p>
 </p>
+
+Notice that "scaly" artifacts appear (look at the mural again!), but these are also hard to notice unless you look very closely. 
+
+Looking at these mosaics makes me feel like I'm back on vacation!
