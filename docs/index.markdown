@@ -208,3 +208,150 @@ My second approach used the distance transforms as a tiebreaker to select whethe
 Notice that "scaly" artifacts appear (look at the mural again!), but these are also hard to notice unless you look very closely. 
 
 Looking at these mosaics makes me feel like I'm back on vacation!
+
+
+# **Part B: Feature Matching for Autostitching**
+
+This part of the project is essentially a simplified reimplementation of the paper ["Multi-Image Matching using Multi-Scale Oriented Patches"](https://ieeexplore.ieee.org/document/1467310), with the addition of a random sample consensus method based on the techniques described in lecture.
+
+# Part B.1: Harris Interest Point Detection
+
+I followed Section 2 in the paper in order to implement corner detection for my images, with the help of provided starter code in `harris.py`. First, I grayscaled my image, then used `get_harris_corners` in to calculate the Harris score and corners. Note that in order to plot the Harris corners, I had to flip the coordinates so that I could plot them in the form (x, y). 
+
+<p align="center">
+    <img src="./img/room1_harrispoints.jpg" alt="ad" width="90%"/>
+    <p style="text-align: center;"><i>Harris points overlaid on the lower room image.</i></p>
+</p>
+
+# Part B.2: Adaptive Non-Maximal Suppression 
+
+Adaptive Non-Maximal Suppression (ANMS) is used to limit the number of interest points while maintaining a good spatial distribution over the entire image. To implement ANMS, I follow Section 3 and use the recommended `c_robust = 0.9` and keep only the top 500 points of interest (though this can be easily adjusted by modifying the optional parameters).
+
+First, I index into the Harris scores to find the score of each corner, which I pass into the provided `dist2` function to calculate a matrix of pairwise corner distances. I then create a mask that determines if $$f(x_i) < c_{robust} * f(x_j)$$ by comparing the strength of each of the corners with a preset scaling factor. I apply the mask to the distances matrix, set zero elements to infinity, then find the minimum suppression radius and sort indices in ascending order based on suppression radii. The first 500 points are kept and returned as the ANMS points. 
+
+<p align="center">
+    <img src="./img/room2_harrispoints.jpg" alt="ad" width="40%"/>
+    <img src="./img/room2_anmspoints.jpg" alt="ad" width="40%"/>
+    <p style="text-align: center;"><i>Harris and ANMS points overlaid on the upper room image.</i></p>
+</p>
+
+<p align="center">
+    <img src="./img/room2_labeled_anms.jpg" alt="ad" width="90%"/>
+    <p style="text-align: center;"><i>Labeled ANMS points overlaid on the upper room image.</i></p>
+</p>
+
+# Part B.3: Feature Descriptor Extraction
+
+Following Section 4, I extract axis-aligned 8x8 patches, which are downsampled from a larger 40x40 window then normlized and flattened.
+
+<p align="center">
+    <img src="./img/room2_features.jpg" alt="ad" width="90%"/>
+    <p style="text-align: center;"><i>Twenty features from the upper room image.</i></p>
+</p>
+
+In this case, it seems that many of the top features lie on the piano keys!
+
+# Part B.4: Feature Matching
+
+In order to recreate correspondence points, we need to pair up features from each image. Following Section 5, I use the features and corresponding points from each image to calculate features' pairwise differences, which is then used to create a summed squared differences matrix. Each feature's row is sorted in ascending order, and the first two nearest neighbor distances for each feature are used to calculate its Lowe score. A mask is created by compare the Lowe score with the Lowe threshold, and a filtered matrix is returned where each row has two indices corresponding to the index of the matching features from the first and second images.
+
+<p align="center">
+    <img src="./img/room_matched.jpg" alt="ad" width="90%"/>
+    <p style="text-align: center;"><i>First five matching features in the room images.</i></p>
+</p>
+
+<p align="center">
+    <img src="./img/room1_matched.jpg" alt="ad" width="40%"/>
+    <img src="./img/room2_matched.jpg" alt="ad" width="40%"/>
+    <p style="text-align: center;"><i>Correspondences between lower and upper room images calculated from feature matching.</i></p>
+</p>
+
+# Part B.5: Random Sample Consensus 
+
+Random Sample Consensus (RANSAC) is an iterative process for estimating a model from a dataset with outliers. For my implementation, I followed the four-point RANSAC method described in lecture, using 500 iterations and a threshold of 0.8.
+
+I use the points identified from feature matching as the input points into RANSAC. For each iteration of the algorithm, I randomly select 4 points, calculate a homography matrix, then use this `H` to transform the full set of input source points. I then compute the number of inliers on this set of points, and create and save the mask if the number of inlier points is the maximum we've seen so far. The mask is produced by comparing the Euclidian distance between the transformed source points to the target points. RANSAC returns two sets of points produced by applying the mask created from the sample producing the maximum set of inliers —— these set of points produced by masking the two sets of input points are the points that produce the best homography, and become our correspondence points for warping and blending (like the ones we manually generated in part A).
+
+<p align="center">
+    <img src="./img/room1_ransac.jpg" alt="ad" width="40%"/>
+    <img src="./img/room2_ransac.jpg" alt="ad" width="40%"/>
+    <p style="text-align: center;"><i>Correspondences between lower and upper room images after RANSAC.</i></p>
+</p>
+
+# Part B.6: Creating Autostitched Mosaics
+
+My autostitching performed very well — in fact, there are virtually no noticeable differences between the autostitched mosaics and the ones I created in Part A! Slight misalignment occurred in the room mosaic, but that was likely because of a slight perspective shift as well as the RANSAC-produced points not being as spatially distributed as my manual annotations, where I was careful to create many correspondence points on the corners of the pictures on the wall. Also, all of my autostitched mosaics were blended with the distance transforms approach. Using the weighted average method on the room picture may make these artifacts less visible.
+
+## Gamcheon Lookout - Left Side
+
+<p align="center">
+    <img src="./img/gamcheonleft_anms.jpg" alt="ad" width="40%"/>
+    <img src="./img/gamcheonmiddle_anms.jpg" alt="ad" width="40%"/>
+    <p style="text-align: center;"><i>Labeled ANMS points overlaid on the left and middle Gamcheon images.</i></p>
+</p>
+
+<p align="center">
+    <img src="./img/gamcheon_left_features.jpg" alt="ad" width="90%"/>
+    <p style="text-align: center;"><i>Five features from the each image. Top row is left Gamcheon, bottom row is middle Gamcheon.</i></p>
+</p>
+
+<p align="center">
+    <img src="./img/gamcheon_matchedfeats.jpg" alt="ad" width="90%"/>
+    <p style="text-align: center;"><i>First five matching features in the left and middle Gamcheon images.</i></p>
+</p>
+
+<p align="center">
+    <img src="./img/gleft_matched.jpg" alt="ad" width="40%"/>
+    <img src="./img/gmid_matched.jpg" alt="ad" width="40%"/>
+    <p style="text-align: center;"><i>Correspondences between left and middle Gamcheon images calculated from feature matching.</i></p>
+</p>
+
+<p align="center">
+    <img src="./img/gleft_ransac.jpg" alt="ad" width="40%"/>
+    <img src="./img/gmid_ransac.jpg" alt="ad" width="40%"/>
+    <p style="text-align: center;"><i>Correspondences between lower and upper room images after RANSAC.</i></p>
+</p>
+
+<p align="center">
+    <img src="./img/gamcheon_left.jpg" alt="ad" width="40%"/>
+    <img src="./img/autostiched_gamcheon_left_dist.jpg" alt="ad" width="40%"/>
+    <p style="text-align: center;"><i>Manually and autostitched mosaics.</i></p>
+</p>
+
+## Gamcheon Lookout - Right Side
+
+<p align="center">
+    <img src="./img/gamcheon_right.jpg" alt="ad" width="40%"/>
+    <img src="./img/autostitched_gamcheon_right_dist.jpg" alt="ad" width="40%"/>
+    <p style="text-align: center;"><i>Manually and autostitched mosaics.</i></p>
+</p>
+
+## Gamcheon Lookout - Full View
+
+<p align="center">
+    <img src="./img/gamcheon_total.jpg" alt="ad" width="40%"/>
+    <img src="./img/autostitched_gamcheon_total_dist.jpg" alt="ad" width="40%"/>
+    <p style="text-align: center;"><i>Manually and autostitched mosaics.</i></p>
+</p>
+
+## Room (Digicam)
+
+<p align="center">
+    <img src="./img/room12_new_highsigma.jpg" alt="ad" width="40%"/>
+    <img src="./img/autostitched_room_autostitched.jpg" alt="ad" width="40%"/>
+    <p style="text-align: center;"><i>Manually and autostitched mosaics.</i></p>
+</p>
+
+## Berkeley Way West
+
+<p align="center">
+    <img src="./img/bww_left.jpg" alt="ad" width="40%"/>
+    <img src="./img/autostitched_bww.jpg" alt="ad" width="40%"/>
+    <p style="text-align: center;"><i>Manually and autostitched mosaics.</i></p>
+</p>
+
+# Reflection
+
+I had a great time learning about how we can use homography matrices to transform images in a way that they line up with each other! I have many images of lecture slides taken at an angle —— now, I can use my rectification methods to transform them into a more rectangular shape to view :)
+
+I think the coolest thing I learned from this project was how we can mathematically identify corners in images, and then whittle down a big list of candidate points into just a handful of highly accurate correspondences using ANMS, feature matching, and RANSAC. Reimplementing methods described in a research paper was also good practice for me as I go further down the research path outside of my classes. Honestly, the hardest part of the project was wrapping my head around the constant shifts between image coordinates, homogenous coordinates, and our standard (x,y) coordinates — many of my long debugging sessions were resolved by making sure my coordinates were what I thought they were! Keeping track of the shifts to align the images for blending was also tricky.
